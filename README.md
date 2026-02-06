@@ -379,6 +379,15 @@ related to the application deployment and operation but not the application itse
 worker:
   enabled: false
 
+  # Worker/Task Runner specific image configuration (for n8n v2+)
+  # For n8n v2.0+, you must use the separate task runner image: n8nio/runners
+  # For n8n v1.x, leave these empty to use the main n8n image.
+  # See: https://docs.n8n.io/2-0-breaking-changes/#remove-task-runner-from-n8nion8n-docker-image
+  image:
+    repository: ""  # Defaults to .Values.image.repository if empty
+    tag: ""         # Defaults to .Values.image.tag if empty
+    pullPolicy: ""  # Defaults to .Values.image.pullPolicy if empty
+
   # additional (to main) config for worker
   config: {}
 
@@ -805,6 +814,72 @@ Key changes include:
 - Updated deployment configurations
 - New Redis integration requirements
 
+## n8n v2.0+ Support and Task Runner Image
+
+Starting with n8n v2.0, the task runner (worker) functionality has been moved to a separate Docker image (`n8nio/runners`). This chart now supports configuring a custom image for workers while maintaining full backwards compatibility with n8n v1.x.
+
+### For n8n v1.x Users (Current Default)
+
+No changes needed! Workers will continue using the main n8n image (`n8nio/n8n`).
+
+### For n8n v2.0+ Users
+
+When upgrading to n8n v2.0 or later, you **must** configure the worker to use the separate task runner image:
+
+```yaml
+image:
+  repository: n8nio/n8n
+  tag: "2.6.3"
+
+main:
+  config:
+    n8n:
+      runner_mode: external
+      runners_broker_listen_address: "0.0.0.0"  # Required for external runners
+      runners_auth_token: "your-secure-random-token"  # Same token for main and workers
+
+worker:
+  enabled: true
+  image:
+    repository: n8nio/runners
+    tag: "2.6.3"
+
+  # Use default entrypoint from runners image
+  command: []
+  commandArgs: []
+
+  # Environment variables for task runner connection
+  extraEnv:
+    N8N_RUNNERS_TASK_BROKER_URI:
+      value: "http://n8n:5679"  # Service name and task broker port
+    N8N_RUNNERS_AUTH_TOKEN:
+      value: "your-secure-random-token"  # Same token as main instance
+
+  # Configure health probes for runners image (port 5680)
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: 5680
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: 5680
+    initialDelaySeconds: 5
+    periodSeconds: 5
+```
+
+**Key points:**
+- The main n8n application continues to use `n8nio/n8n`
+- Workers/task runners must use `n8nio/runners` for n8n v2.0+
+- **Task broker** listens on port 5679 and must be set to `0.0.0.0` for external runners
+- **Shared authentication token** required between main and workers
+- **Health check server** for runners is on port 5680 (not 5678)
+- Workers must not override command/args to use the image's default entrypoint
+- If `worker.image.*` is not specified, it defaults to the global `image.*` configuration (backwards compatible)
+
+For more details, see the [n8n v2.0 breaking changes documentation](https://docs.n8n.io/2-0-breaking-changes/#remove-task-runner-from-n8nion8n-docker-image).
 
 ## Scaling and Advanced Configuration Options
 

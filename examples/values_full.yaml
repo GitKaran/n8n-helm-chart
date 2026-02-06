@@ -68,6 +68,35 @@ main:
 
 worker:
   enabled: true
+  # For n8n v2.0+, you must use the separate task runner image
+  # Uncomment the following lines when upgrading to n8n v2.0+:
+  # image:
+  #   repository: n8nio/runners
+  #   tag: 2.6.3
+  #
+  # Override command to use runners image default entrypoint:
+  # command: []
+  # commandArgs: []
+  #
+  # Configure health probes for runners image (health check on port 5680):
+  # livenessProbe:
+  #   httpGet:
+  #     path: /healthz
+  #     port: 5680
+  #   initialDelaySeconds: 10
+  #   periodSeconds: 10
+  #   timeoutSeconds: 5
+  #   failureThreshold: 3
+  # readinessProbe:
+  #   httpGet:
+  #     path: /healthz
+  #     port: 5680
+  #   initialDelaySeconds: 5
+  #   periodSeconds: 5
+  #   timeoutSeconds: 5
+  #   failureThreshold: 3
+  #
+  # See: https://docs.n8n.io/2-0-breaking-changes/#remove-task-runner-from-n8nion8n-docker-image
   extraEnv: *extraEnv # using YAML magic (anchors) to reference main extraEnv
   extraVolumeMounts: *extraVolumeMounts # using YAML magic (anchors) to reference main extraVolumeMounts
   extraVolumes: *extraVolumes # using YAML magic (anchors) to reference main extraVolumes

@@ -84,6 +84,9 @@ spec:
             - name: http
               containerPort: {{ get (default (dict) .Values.main.config.n8n) "port" | default 5678 }}
               protocol: TCP
+            - name: task-broker
+              containerPort: 5679
+              protocol: TCP
           {{- with .Values.main.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}

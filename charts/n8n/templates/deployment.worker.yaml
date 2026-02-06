@@ -57,8 +57,8 @@ spec:
         - name: {{ .Chart.Name }}-worker
           securityContext:
             {{- toYaml .Values.worker.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          image: "{{ .Values.worker.image.repository | default .Values.image.repository }}:{{ .Values.worker.image.tag | default (.Values.image.tag | default .Chart.AppVersion) }}"
+          imagePullPolicy: {{ .Values.worker.image.pullPolicy | default .Values.image.pullPolicy }}
           envFrom:
             {{- if .Values.main.config }}
             - configMapRef:
@@ -81,15 +81,19 @@ spec:
             - name: {{ $key }}
               {{- toYaml $value | nindent 14 }}
             {{- end }}
+          {{- if hasKey .Values.worker "command" }}
           {{- if .Values.worker.command }}
           command:
             {{- toYaml .Values.worker.command | nindent 12 }}
+          {{- end }}
           {{- else }}
           command: ["n8n"]
           {{- end }}
+          {{- if hasKey .Values.worker "commandArgs" }}
           {{- if .Values.worker.commandArgs }}
           args:
             {{- toYaml .Values.worker.commandArgs | nindent 12 }}
+          {{- end }}
           {{- else }}
           args:
             - "worker"

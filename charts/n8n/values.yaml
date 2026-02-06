@@ -278,6 +278,20 @@ main:
 worker:
   enabled: false
 
+  # Worker/Task Runner specific image configuration (for n8n v2+)
+  # If not specified, defaults to the global image configuration above.
+  # For n8n v2.0+, you should use the separate task runner image: n8nio/runners
+  # For n8n v1.x, leave these empty to use the main n8n image.
+  # See: https://docs.n8n.io/2-0-breaking-changes/#remove-task-runner-from-n8nion8n-docker-image
+  image:
+    # For n8n v2+, set to n8nio/runners
+    # If empty, defaults to .Values.image.repository (n8nio/n8n)
+    repository: ""
+    # If empty, defaults to .Values.image.tag or Chart.AppVersion
+    tag: ""
+    # If empty, defaults to .Values.image.pullPolicy
+    pullPolicy: ""
+
   # additional (to main) config for worker
   config: {}
 
@@ -585,31 +599,27 @@ webhook:
   # Command Arguments
   commandArgs: []
 
-  # here you can override the livenessProbe for the main container
-  # it may be used to increase the timeout for the livenessProbe (e.g., to resolve issues like
-
+  # here you can override the livenessProbe for the worker container
+  # For n8n v2+, the runners image exposes health check on port 5680
+  # For n8n v1.x using main image, use port: http (5678)
   livenessProbe:
     httpGet:
       path: /healthz
-      port: http
-    # initialDelaySeconds: 30
-    # periodSeconds: 10
-    # timeoutSeconds: 5
-    # failureThreshold: 6
-    # successThreshold: 1
+      port: 5680  # Runners health check server port (n8n v2+)
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
 
-  # here you can override the readinessProbe for the main container
-  # it may be used to increase the timeout for the readinessProbe (e.g., to resolve issues like
-
+  # here you can override the readinessProbe for the worker container
   readinessProbe:
     httpGet:
       path: /healthz
-      port: http
-    # initialDelaySeconds: 30
-    # periodSeconds: 10
-    # timeoutSeconds: 5
-    # failureThreshold: 6
-    # successThreshold: 1
+      port: 5680  # Runners health check server port (n8n v2+)
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 5
+    failureThreshold: 3
 
   # List of initialization containers belonging to the pod. Init containers are executed in order prior to containers being started.
   # See https://kubernetes.io/docs/concepts/workloads/pods/init-containers/

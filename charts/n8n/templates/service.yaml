@@ -17,6 +17,10 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
+    - port: 5679
+      targetPort: 5679
+      protocol: TCP
+      name: task-broker
   selector:
     {{- include "n8n.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/type: master
