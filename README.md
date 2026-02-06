@@ -824,7 +824,11 @@ No changes needed! Workers will continue using the main n8n image (`n8nio/n8n`).
 
 ### For n8n v2.0+ Users
 
-When upgrading to n8n v2.0 or later, you **must** configure the worker to use the separate task runner image:
+When upgrading to n8n v2.0 or later, you need to configure task runners. The configuration differs based on your deployment architecture:
+
+#### Single-Instance Deployment (Default)
+
+For basic deployments without queue mode, configure the worker as a task runner sidecar:
 
 ```yaml
 image:
@@ -836,12 +840,14 @@ main:
     n8n:
       runner_mode: external
       runners_broker_listen_address: "0.0.0.0"  # Required for external runners
-      runners_auth_token: "your-secure-random-token"  # Same token for main and workers
+  secret:
+    n8n:
+      runners_auth_token: "your-secure-random-token"  # Use secret, not config!
 
 worker:
   enabled: true
   image:
-    repository: n8nio/runners
+    repository: n8nio/runners  # Task runner image
     tag: "2.6.3"
 
   # Use default entrypoint from runners image
@@ -853,7 +859,10 @@ worker:
     N8N_RUNNERS_TASK_BROKER_URI:
       value: "http://n8n:5679"  # Service name and task broker port
     N8N_RUNNERS_AUTH_TOKEN:
-      value: "your-secure-random-token"  # Same token as main instance
+      valueFrom:
+        secretKeyRef:
+          name: n8n-app-secret  # Reference secret created from main.secret
+          key: N8N_RUNNERS_AUTH_TOKEN
 
   # Configure health probes for runners image (port 5680)
   livenessProbe:
@@ -870,13 +879,26 @@ worker:
     periodSeconds: 5
 ```
 
+#### Queue Mode Deployment (Production)
+
+For production deployments using queue mode (`EXECUTIONS_MODE=queue`), **workers** and **task runners** are separate concepts:
+- **Workers** execute workflows from the Redis queue (use `n8nio/n8n` image)
+- **Task runners** handle Code node execution (use `n8nio/runners` as sidecar)
+
+In queue mode, you typically need:
+1. Main instance(s) receiving webhooks/triggers
+2. Worker instances pulling jobs from Redis
+3. Task runner sidecars alongside each worker (and main if it runs manual executions)
+
+For queue mode, keep workers using the n8n image and deploy task runners as separate sidecar containers or pods. See the [examples/values_full.yaml](./examples/values_full.yaml) for a complete production configuration.
+
 **Key points:**
-- The main n8n application continues to use `n8nio/n8n`
-- Workers/task runners must use `n8nio/runners` for n8n v2.0+
+- **Single-instance mode**: `worker` helm chart component becomes the task runner (uses `n8nio/runners`)
+- **Queue mode**: Workers use `n8nio/n8n` image; deploy task runners as sidecars separately
 - **Task broker** listens on port 5679 and must be set to `0.0.0.0` for external runners
-- **Shared authentication token** required between main and workers
+- **Auth token** should be in `main.secret` and `worker.secret`, not in config (stored as Kubernetes Secret)
 - **Health check server** for runners is on port 5680 (not 5678)
-- Workers must not override command/args to use the image's default entrypoint
+- Task runners must not override command/args to use the image's default entrypoint
 - If `worker.image.*` is not specified, it defaults to the global `image.*` configuration (backwards compatible)
 
 For more details, see the [n8n v2.0 breaking changes documentation](https://docs.n8n.io/2-0-breaking-changes/#remove-task-runner-from-n8nion8n-docker-image).
