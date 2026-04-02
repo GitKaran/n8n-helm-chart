@@ -213,11 +213,12 @@ main:
     # successThreshold: 1
 
   # here you can override the readinessProbe for the main container
-  # it may be used to increase the timeout for the readinessProbe (e.g., to resolve issues like
+  # Since n8n 2.13.0+, /healthz/readiness properly gates on full initialization
+  # (routes, event bus, workflow indexing) before returning 200.
 
   readinessProbe:
     httpGet:
-      path: /healthz
+      path: /healthz/readiness
       port: http
     # initialDelaySeconds: 30
     # periodSeconds: 10
@@ -428,9 +429,10 @@ worker:
   # here you can override the readinessProbe for the worker container
   # For n8n v2+, the runners image exposes health check on port 5680
   # For n8n v1.x using main image, use port: http (5678)
+  # Since n8n 2.13.0+, /healthz/readiness properly gates on full initialization.
   readinessProbe:
     httpGet:
-      path: /healthz
+      path: /healthz/readiness
       port: 5680  # Runners health check server port (n8n v2+)
     initialDelaySeconds: 5
     periodSeconds: 5
@@ -614,11 +616,12 @@ webhook:
     # successThreshold: 1
 
   # here you can override the readinessProbe for the webhook container
-  # it may be used to increase the timeout for the readinessProbe (e.g., to resolve issues like
+  # Since n8n 2.13.0+, /healthz/readiness properly gates on full initialization
+  # (routes, event bus, workflow indexing) before returning 200.
 
   readinessProbe:
     httpGet:
-      path: /healthz
+      path: /healthz/readiness
       port: http
     # initialDelaySeconds: 30
     # periodSeconds: 10
